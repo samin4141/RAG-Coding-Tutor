@@ -3,62 +3,62 @@ import json
 from typing import Dict, Any, Iterator, Optional
 import os
 
-class LLMClient:
-    def __init__(self, base_url: str = "http://localhost:11434"):
-        self.base_url = base_url
-        self.model = "llama3.2:latest"  # This is our go-to model, works pretty well
+class AIHelper:
+    def __init__(self, ollama_url: str = "http://localhost:11434"):
+        self.ollama_url = ollama_url
+        self.default_model = "llama3.2:latest"  # This is our go-to model, works pretty well
         
-    def generate(self, prompt: str, model: Optional[str] = None, stream: bool = False, **kwargs) -> str:
+    def ask_ai(self, question: str, model_name: Optional[str] = None, stream_response: bool = False, **extra_options) -> str:
         """Ask the AI to generate some text - pretty straightforward stuff"""
-        model = model or self.model
+        model_to_use = model_name or self.default_model
         
-        payload = {
-            "model": model,
-            "prompt": prompt,
-            "stream": stream,
-            **kwargs
+        request_data = {
+            "model": model_to_use,
+            "prompt": question,
+            "stream": stream_response,
+            **extra_options
         }
         
         try:
-            response = requests.post(
-                f"{self.base_url}/api/generate",
-                json=payload,
-                stream=stream,
+            ai_response = requests.post(
+                f"{self.ollama_url}/api/generate",
+                json=request_data,
+                stream=stream_response,
                 timeout=60
             )
-            response.raise_for_status()
+            ai_response.raise_for_status()
             
-            if stream:
-                return self._handle_stream_response(response)
+            if stream_response:
+                return self._collect_streaming_response(ai_response)
             else:
-                result = response.json()
-                return result.get("response", "")
+                response_data = ai_response.json()
+                return response_data.get("response", "")
                 
         except requests.exceptions.RequestException as e:
             print(f"Uh oh, Ollama isn't happy: {e}")
             return "Hmm, looks like I can't reach the AI brain right now. Is Ollama actually running?"
     
-    def generate_stream(self, prompt: str, model: Optional[str] = None, **kwargs) -> Iterator[str]:
-        """Same as generate but streams the response as it comes - fancy!"""
-        model = model or self.model
+    def ask_ai_streaming(self, question: str, model_name: Optional[str] = None, **extra_options) -> Iterator[str]:
+        """Same as ask_ai but streams the response as it comes - fancy!"""
+        model_to_use = model_name or self.default_model
         
-        payload = {
-            "model": model,
-            "prompt": prompt,
+        request_data = {
+            "model": model_to_use,
+            "prompt": question,
             "stream": True,
-            **kwargs
+            **extra_options
         }
         
         try:
-            response = requests.post(
-                f"{self.base_url}/api/generate",
-                json=payload,
+            ai_response = requests.post(
+                f"{self.ollama_url}/api/generate",
+                json=request_data,
                 stream=True,
                 timeout=60
             )
-            response.raise_for_status()
+            ai_response.raise_for_status()
             
-            for line in response.iter_lines():
+            for line in ai_response.iter_lines():
                 if line:
                     try:
                         data = json.loads(line.decode('utf-8'))
@@ -73,51 +73,51 @@ class LLMClient:
             print(f"Stream broke, whoops: {e}")
             yield "Looks like the AI stream got disconnected. Double-check that Ollama is still running!"
     
-    def _handle_stream_response(self, response) -> str:
+    def _collect_streaming_response(self, ai_response) -> str:
         """Takes all the streaming chunks and glues them back together"""
-        complete_response = ""
-        for line in response.iter_lines():
+        full_answer = ""
+        for line in ai_response.iter_lines():
             if line:
                 try:
                     data = json.loads(line.decode('utf-8'))
                     if 'response' in data:
-                        complete_response += data['response']
+                        full_answer += data['response']
                     if data.get('done', False):
                         break
                 except json.JSONDecodeError:
                     continue  # Sometimes we get weird data, just skip it
-        return complete_response
+        return full_answer
     
-    def chat(self, query: str, context: str = "", system_prompt: str = None) -> str:
+    def chat_with_context(self, user_question: str, relevant_notes: str = "", instructions: str = None) -> str:
         """This is where the magic happens - chat with your own notes as context"""
-        if system_prompt is None:
-            system_prompt = """You are a coding interview tutor. Use only the provided context from the student's own notes and solutions. 
+        if instructions is None:
+            instructions = """You are a coding interview tutor. Use only the provided context from the student's own notes and solutions. 
 
 If the information is not in the context, say so clearly and suggest they might want to add more notes or practice problems on that topic.
 
 Return short, precise explanations with code examples when useful. Always cite your sources by mentioning the file or section name."""
         
-        if context:
-            prompt = f"""System: {system_prompt}
+        if relevant_notes:
+            full_prompt = f"""System: {instructions}
 
 Context from your notes:
-{context}
+{relevant_notes}
 
-Question: {query}
+Question: {user_question}
 
 Answer:"""
         else:
-            prompt = f"""System: {system_prompt}
+            full_prompt = f"""System: {instructions}
 
-Question: {query}
+Question: {user_question}
 
 Answer: I don't have any relevant notes or context for this question. You might want to add some study materials or practice problems on this topic first."""
         
-        return self.generate(prompt)
+        return self.ask_ai(full_prompt)
     
-    def generate_feedback(self, student_code: str, canonical_code: str, problem_title: str, test_results: Dict[str, Any]) -> str:
+    def give_coding_feedback(self, student_solution: str, reference_solution: str, problem_name: str, test_results: Dict[str, Any]) -> str:
         """Be a helpful coding tutor - compare student's attempt with the ideal solution"""
-        system_prompt = """You are a coding interview tutor providing feedback on a student's solution.
+        tutor_instructions = """You are a coding interview tutor providing feedback on a student's solution.
 
 Compare the student's code to the canonical solution and provide specific feedback on:
 1. Correctness (did it pass the tests?)
@@ -127,18 +127,18 @@ Compare the student's code to the canonical solution and provide specific feedba
 
 Be constructive and specific. Cite line numbers when possible."""
         
-        prompt = f"""System: {system_prompt}
+        feedback_prompt = f"""System: {tutor_instructions}
 
-Problem: {problem_title}
+Problem: {problem_name}
 
 Student's Code:
 ```python
-{student_code}
+{student_solution}
 ```
 
 Canonical Solution:
 ```python
-{canonical_code}
+{reference_solution}
 ```
 
 Test Results:
@@ -147,9 +147,9 @@ Test Results:
 
 Provide detailed feedback:"""
         
-        return self.generate(prompt)
+        return self.ask_ai(feedback_prompt)
     
-    def generate_hint(self, problem_prompt: str, context: str, hint_level: int = 1) -> str:
+    def give_hint(self, problem_description: str, student_notes: str, hint_level: int = 1) -> str:
         """Give hints that get progressively more obvious - like a good friend helping you out"""
         hint_prompts = {
             1: "Give a very subtle hint about the approach without revealing the solution.",
@@ -157,37 +157,37 @@ Provide detailed feedback:"""
             3: "Give a detailed hint with pseudocode but not the full implementation."
         }
         
-        system_prompt = f"""You are a coding interview tutor providing hints. {hint_prompts.get(hint_level, hint_prompts[1])}
+        hint_instructions = f"""You are a coding interview tutor providing hints. {hint_prompts.get(hint_level, hint_prompts[1])}
 
 Use the provided context from the student's notes if relevant."""
         
-        prompt = f"""System: {system_prompt}
+        hint_prompt = f"""System: {hint_instructions}
 
 Problem:
-{problem_prompt}
+{problem_description}
 
 Context from notes:
-{context}
+{student_notes}
 
 Hint (level {hint_level}):"""
         
-        return self.generate(prompt)
+        return self.ask_ai(hint_prompt)
     
-    def check_connection(self) -> bool:
+    def is_ai_working(self) -> bool:
         """Quick health check - is our AI buddy actually awake?"""
         try:
-            response = requests.get(f"{self.base_url}/api/tags", timeout=5)
-            return response.status_code == 200
+            health_check = requests.get(f"{self.ollama_url}/api/tags", timeout=5)
+            return health_check.status_code == 200
         except:
             return False
     
-    def list_models(self) -> list:
+    def get_available_models(self) -> list:
         """See what AI models you've got installed locally"""
         try:
-            response = requests.get(f"{self.base_url}/api/tags", timeout=10)
-            if response.status_code == 200:
-                data = response.json()
-                return [model['name'] for model in data.get('models', [])]
+            models_response = requests.get(f"{self.ollama_url}/api/tags", timeout=10)
+            if models_response.status_code == 200:
+                models_data = models_response.json()
+                return [model['name'] for model in models_data.get('models', [])]
             return []
         except:
             return []

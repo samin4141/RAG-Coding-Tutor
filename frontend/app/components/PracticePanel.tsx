@@ -40,20 +40,20 @@ interface SubmissionResult {
 }
 
 export default function PracticePanel() {
-  const [problem, setProblem] = useState<Problem | null>(null)
-  const [code, setCode] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
-  const [result, setResult] = useState<SubmissionResult | null>(null)
-  const [showHint, setShowHint] = useState(false)
-  const [hint, setHint] = useState('')
+  const [currentProblem, setCurrentProblem] = useState<Problem | null>(null)
+  const [studentCode, setStudentCode] = useState('')
+  const [isLoadingProblem, setIsLoadingProblem] = useState(false)
+  const [isRunningTests, setIsRunningTests] = useState(false)
+  const [testResults, setTestResults] = useState<SubmissionResult | null>(null)
+  const [isHintVisible, setIsHintVisible] = useState(false)
+  const [currentHint, setCurrentHint] = useState('')
   const [hintLevel, setHintLevel] = useState(1)
 
-  const startPractice = async (difficulty?: string) => {
-    setLoading(true)
-    setResult(null)
-    setShowHint(false)
-    setHint('')
+  const pickNewProblem = async (difficulty?: string) => {
+    setIsLoadingProblem(true)
+    setTestResults(null)
+    setIsHintVisible(false)
+    setCurrentHint('')
     setHintLevel(1)
     
     try {
@@ -65,22 +65,22 @@ export default function PracticePanel() {
         throw new Error('Failed to start practice')
       }
       
-      const data: Problem = await response.json()
-      setProblem(data)
-      setCode('# Write your solution here\n\n')
-      toast.success(`Started: ${data.title}`)
+      const problemData: Problem = await response.json()
+      setCurrentProblem(problemData)
+      setStudentCode('# Write your solution here\n\n')
+      toast.success(`Started: ${problemData.title}`)
     } catch (error) {
       console.error('Whoops, failed to start practice:', error)
       toast.error('Could not start practice - something went wrong!')
     } finally {
-      setLoading(false)
+      setIsLoadingProblem(false)
     }
   }
 
-  const submitCode = async () => {
-    if (!problem || !code.trim()) return
+  const runMyCode = async () => {
+    if (!currentProblem || !studentCode.trim()) return
     
-    setSubmitting(true)
+    setIsRunningTests(true)
     
     try {
       const response = await fetch('/api/practice/submit', {
@@ -89,8 +89,8 @@ export default function PracticePanel() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          problem_id: problem.problem_id,
-          code: code,
+          problem_id: currentProblem.problem_id,
+          code: studentCode,
           language: 'python'
         }),
       })
@@ -99,10 +99,10 @@ export default function PracticePanel() {
         throw new Error('Failed to submit code')
       }
       
-      const data: SubmissionResult = await response.json()
-      setResult(data)
+      const submissionData: SubmissionResult = await response.json()
+      setTestResults(submissionData)
       
-      if (data.passed) {
+      if (submissionData.passed) {
         toast.success('Nailed it! All tests passed! 🎉')
       } else {
         toast.error('Not quite there yet - check the results below')
@@ -111,12 +111,12 @@ export default function PracticePanel() {
       console.error('Submit failed:', error)
       toast.error('Could not submit your code - try again!')
     } finally {
-      setSubmitting(false)
+      setIsRunningTests(false)
     }
   }
 
-  const getHint = async () => {
-    if (!problem) return
+  const askForHint = async () => {
+    if (!currentProblem) return
     
     try {
       const response = await fetch('/api/practice/hint', {
@@ -125,7 +125,7 @@ export default function PracticePanel() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          problem_id: problem.problem_id,
+          problem_id: currentProblem.problem_id,
           hint_level: hintLevel
         }),
       })
@@ -134,9 +134,9 @@ export default function PracticePanel() {
         throw new Error('Failed to get hint')
       }
       
-      const data = await response.json()
-      setHint(data.hint)
-      setShowHint(true)
+      const hintData = await response.json()
+      setCurrentHint(hintData.hint)
+      setIsHintVisible(true)
       toast.success(`Here's hint #${hintLevel} for you!`)
     } catch (error) {
       console.error('Hint request failed:', error)
@@ -153,7 +153,7 @@ export default function PracticePanel() {
     }
   }
 
-  if (!problem) {
+  if (!currentProblem) {
     return (
       <div className="flex flex-col h-screen">
         {/* Header */}
@@ -179,35 +179,35 @@ export default function PracticePanel() {
             
             <div className="space-y-3">
               <button
-                onClick={() => startPractice('easy')}
-                disabled={loading}
+                onClick={() => pickNewProblem('easy')}
+                disabled={isLoadingProblem}
                 className="w-48 btn-primary disabled:opacity-50"
               >
-                {loading ? 'Loading...' : 'Start Easy Problem'}
+                {isLoadingProblem ? 'Loading...' : 'Start Easy Problem'}
               </button>
               
               <button
-                onClick={() => startPractice('medium')}
-                disabled={loading}
+                onClick={() => pickNewProblem('medium')}
+                disabled={isLoadingProblem}
                 className="w-48 btn-primary disabled:opacity-50"
               >
-                {loading ? 'Loading...' : 'Start Medium Problem'}
+                {isLoadingProblem ? 'Loading...' : 'Start Medium Problem'}
               </button>
               
               <button
-                onClick={() => startPractice('hard')}
-                disabled={loading}
+                onClick={() => pickNewProblem('hard')}
+                disabled={isLoadingProblem}
                 className="w-48 btn-primary disabled:opacity-50"
               >
-                {loading ? 'Loading...' : 'Start Hard Problem'}
+                {isLoadingProblem ? 'Loading...' : 'Start Hard Problem'}
               </button>
               
               <button
-                onClick={() => startPractice()}
-                disabled={loading}
+                onClick={() => pickNewProblem()}
+                disabled={isLoadingProblem}
                 className="w-48 btn-secondary disabled:opacity-50"
               >
-                {loading ? 'Loading...' : 'Random Problem'}
+                {isLoadingProblem ? 'Loading...' : 'Random Problem'}
               </button>
             </div>
           </div>
@@ -222,12 +222,12 @@ export default function PracticePanel() {
       <div className="bg-white border-b border-gray-200 p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">{problem.title}</h2>
+            <h2 className="text-xl font-bold text-gray-900">{currentProblem.title}</h2>
             <div className="flex items-center space-x-3 mt-2">
-              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getDifficultyColor(problem.difficulty)}`}>
-                {problem.difficulty}
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getDifficultyColor(currentProblem.difficulty)}`}>
+                {currentProblem.difficulty}
               </span>
-              {problem.tags.map((tag, index) => (
+              {currentProblem.tags.map((tag, index) => (
                 <span key={index} className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
                   {tag}
                 </span>
@@ -237,7 +237,7 @@ export default function PracticePanel() {
           
           <div className="flex space-x-3">
             <button
-              onClick={getHint}
+              onClick={askForHint}
               className="btn-secondary flex items-center space-x-2"
             >
               <LightBulbIcon className="w-4 h-4" />
@@ -245,7 +245,7 @@ export default function PracticePanel() {
             </button>
             
             <button
-              onClick={() => startPractice()}
+              onClick={() => pickNewProblem()}
               className="btn-secondary"
             >
               New Problem
@@ -280,15 +280,15 @@ export default function PracticePanel() {
                   }
                 }}
               >
-                {problem.prompt_md}
+                {currentProblem.prompt_md}
               </ReactMarkdown>
             </div>
             
             {/* Sample Tests */}
-            {problem.sample_tests.length > 0 && (
+            {currentProblem.sample_tests.length > 0 && (
               <div className="mt-6">
                 <h3 className="text-lg font-semibold mb-3">Sample Tests</h3>
-                {problem.sample_tests.map((test, index) => (
+                {currentProblem.sample_tests.map((test, index) => (
                   <div key={index} className="mb-4 p-3 bg-gray-50 rounded-lg">
                     <div className="mb-2">
                       <strong>Input:</strong>
@@ -304,19 +304,19 @@ export default function PracticePanel() {
             )}
             
             {/* Hint */}
-            {showHint && hint && (
+            {isHintVisible && currentHint && (
               <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <h3 className="text-lg font-semibold mb-2 flex items-center">
                   <LightBulbIcon className="w-5 h-5 mr-2 text-yellow-600" />
                   Hint (Level {hintLevel})
                 </h3>
                 <div className="markdown-content">
-                  <ReactMarkdown>{hint}</ReactMarkdown>
+                  <ReactMarkdown>{currentHint}</ReactMarkdown>
                 </div>
                 <button
                   onClick={() => {
                     setHintLevel(prev => prev + 1)
-                    getHint()
+                    askForHint()
                   }}
                   className="mt-3 text-sm text-yellow-700 hover:text-yellow-800"
                 >
@@ -335,8 +335,8 @@ export default function PracticePanel() {
               <Editor
                 height="100%"
                 defaultLanguage="python"
-                value={code}
-                onChange={(value) => setCode(value || '')}
+                value={studentCode}
+                onChange={(value) => setStudentCode(value || '')}
                 theme="vs-dark"
                 options={{
                   minimap: { enabled: false },
@@ -353,46 +353,46 @@ export default function PracticePanel() {
           {/* Submit Button */}
           <div className="p-4 bg-white border-b border-gray-200">
             <button
-              onClick={submitCode}
-              disabled={submitting || !code.trim()}
+              onClick={runMyCode}
+              disabled={isRunningTests || !studentCode.trim()}
               className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
             >
               <PlayIcon className="w-4 h-4" />
-              <span>{submitting ? 'Running Tests...' : 'Submit & Test'}</span>
+              <span>{isRunningTests ? 'Running Tests...' : 'Submit & Test'}</span>
             </button>
           </div>
 
           {/* Results */}
-          {result && (
+          {testResults && (
             <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
               <div className="space-y-4">
                 {/* Overall Result */}
                 <div className={`p-4 rounded-lg ${
-                  result.passed ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
+                  testResults.passed ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
                 }`}>
                   <div className="flex items-center space-x-2">
-                    {result.passed ? (
+                    {testResults.passed ? (
                       <CheckCircleIcon className="w-5 h-5 text-green-600" />
                     ) : (
                       <XCircleIcon className="w-5 h-5 text-red-600" />
                     )}
                     <span className={`font-semibold ${
-                      result.passed ? 'text-green-800' : 'text-red-800'
+                      testResults.passed ? 'text-green-800' : 'text-red-800'
                     }`}>
-                      {result.passed ? 'All Tests Passed!' : 'Some Tests Failed'}
+                      {testResults.passed ? 'All Tests Passed!' : 'Some Tests Failed'}
                     </span>
                   </div>
                   <p className={`mt-1 text-sm ${
-                    result.passed ? 'text-green-700' : 'text-red-700'
+                    testResults.passed ? 'text-green-700' : 'text-red-700'
                   }`}>
-                    Score: {(result.score * 100).toFixed(1)}%
+                    Score: {(testResults.score * 100).toFixed(1)}%
                   </p>
                 </div>
 
                 {/* Test Results */}
                 <div>
                   <h3 className="font-semibold mb-2">Test Results</h3>
-                  {result.test_results.map((test, index) => (
+                  {testResults.test_results.map((test, index) => (
                     <div key={index} className={`mb-3 p-3 rounded-lg border ${
                       test.passed ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
                     }`}>
@@ -426,11 +426,11 @@ export default function PracticePanel() {
                 </div>
 
                 {/* AI Feedback */}
-                {result.feedback_md && (
+                {testResults.feedback_md && (
                   <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <h3 className="font-semibold mb-2">AI Feedback</h3>
                     <div className="markdown-content text-sm">
-                      <ReactMarkdown>{result.feedback_md}</ReactMarkdown>
+                      <ReactMarkdown>{testResults.feedback_md}</ReactMarkdown>
                     </div>
                   </div>
                 )}

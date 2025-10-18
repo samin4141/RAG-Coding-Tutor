@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from core.database import get_db, Document
 from core.vector_store import VectorStore
-from core.llm_client import LLMClient
+from core.llm_client import AIHelper
 
 router = APIRouter()
 
@@ -24,9 +24,9 @@ async def chat(request: ChatRequest, req: Request, db: Session = Depends(get_db)
     """Chat endpoint with RAG"""
     try:
         vector_store: VectorStore = req.app.state.vector_store
-        llm_client: LLMClient = req.app.state.llm_client
+        ai_helper: AIHelper = req.app.state.llm_client
         
-        # Retrieve relevant context
+        # Find relevant stuff from the user's notes
         search_results = vector_store.hybrid_search(
             request.query, 
             k=12, 
@@ -34,12 +34,12 @@ async def chat(request: ChatRequest, req: Request, db: Session = Depends(get_db)
             threshold=0.35
         )
         
-        # Build context from search results
-        context_parts = []
-        sources = []
+        # Put together the context from what we found
+        relevant_snippets = []
+        source_references = []
         
         for result in search_results:
-            # Get document info
+            # Get the document details
             doc = db.query(Document).filter(Document.id == result['document_id']).first()
             if doc:
                 source_info = {
@@ -48,25 +48,25 @@ async def chat(request: ChatRequest, req: Request, db: Session = Depends(get_db)
                     'section': result['metadata'].get('section', ''),
                     'score': result['score']
                 }
-                sources.append(source_info)
+                source_references.append(source_info)
                 
-                # Format context with source attribution
+                # Format the context with where it came from
                 section = result['metadata'].get('section', '')
                 source_label = f"[{doc.path}#{section}]" if section else f"[{doc.path}]"
-                context_parts.append(f"{source_label}\n{result['text']}")
+                relevant_snippets.append(f"{source_label}\n{result['text']}")
         
-        context = "\n\n".join(context_parts)
+        combined_context = "\n\n".join(relevant_snippets)
         
-        # Generate response
+        # Get the AI's response
         if request.stream:
             def generate_stream():
-                for chunk in llm_client.generate_stream(
-                    llm_client.chat(request.query, context)
+                for chunk in ai_helper.ask_ai_streaming(
+                    ai_helper.chat_with_context(request.query, combined_context)
                 ):
                     yield f"data: {json.dumps({'content': chunk})}\n\n"
                 
                 # Send sources at the end
-                yield f"data: {json.dumps({'sources': sources, 'done': True})}\n\n"
+                yield f"data: {json.dumps({'sources': source_references, 'done': True})}\n\n"
             
             return StreamingResponse(
                 generate_stream(),
@@ -74,8 +74,8 @@ async def chat(request: ChatRequest, req: Request, db: Session = Depends(get_db)
                 headers={"Cache-Control": "no-cache"}
             )
         else:
-            response = llm_client.chat(request.query, context)
-            return ChatResponse(response=response, sources=sources)
+            ai_response = ai_helper.chat_with_context(request.query, combined_context)
+            return ChatResponse(response=ai_response, sources=source_references)
             
     except Exception as e:
         print(f"Chat error: {e}")
@@ -85,9 +85,9 @@ async def chat(request: ChatRequest, req: Request, db: Session = Depends(get_db)
 async def list_models(req: Request):
     """List available LLM models"""
     try:
-        llm_client: LLMClient = req.app.state.llm_client
-        models = llm_client.list_models()
-        return {"models": models}
+        ai_helper: AIHelper = req.app.state.llm_client
+        available_models = ai_helper.get_available_models()
+        return {"models": available_models}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -95,16 +95,16 @@ async def list_models(req: Request):
 async def chat_health(req: Request):
     """Check chat service health"""
     try:
-        llm_client: LLMClient = req.app.state.llm_client
+        ai_helper: AIHelper = req.app.state.llm_client
         vector_store: VectorStore = req.app.state.vector_store
         
-        llm_connected = llm_client.check_connection()
+        ai_is_working = ai_helper.is_ai_working()
         vector_stats = vector_store.get_stats()
         
         return {
-            "llm_connected": llm_connected,
+            "llm_connected": ai_is_working,
             "vector_store": vector_stats,
-            "status": "healthy" if llm_connected else "llm_disconnected"
+            "status": "healthy" if ai_is_working else "llm_disconnected"
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

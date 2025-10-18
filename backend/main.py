@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from api.routes import chat, ingest, practice, search
 from core.database import init_db
 from core.vector_store import VectorStore
-from core.llm_client import LLMClient
+from core.llm_client import AIHelper
 
 load_dotenv()
 
@@ -33,13 +33,13 @@ async def startup_event():
     vector_store = VectorStore()
     app.state.vector_store = vector_store
     
-    # Initialize LLM client
-    llm_client = LLMClient()
-    app.state.llm_client = llm_client
+    # Initialize AI helper
+    ai_helper = AIHelper()
+    app.state.llm_client = ai_helper
     
     print("🚀 Coding Interview RAG Tutor started successfully!")
     print("📚 Vector store initialized")
-    print("🤖 LLM client ready")
+    print("🤖 AI helper ready")
 
 # Include routers
 app.include_router(chat.router, prefix="/api/chat", tags=["chat"])

@@ -5,7 +5,7 @@ import random
 from sqlalchemy.orm import Session
 
 from core.database import get_db, Problem, Solution, TestCase, Attempt
-from core.llm_client import LLMClient
+from core.llm_client import AIHelper
 from services.code_executor import CodeExecutor
 
 router = APIRouter()
@@ -104,7 +104,7 @@ async def submit_code(
 ):
     """Submit your solution and see how you did - fingers crossed!"""
     try:
-        llm_client: LLMClient = req.app.state.llm_client
+        ai_helper: AIHelper = req.app.state.llm_client
         
         # First, let's find the problem you're working on
         problem = db.query(Problem).filter(Problem.id == request.problem_id).first()
@@ -155,10 +155,10 @@ async def submit_code(
                 'total': total_tests,
                 'all_passed': all_passed
             }
-            feedback_md = llm_client.generate_feedback(
-                student_code=request.code,
-                canonical_code=canonical_solution.code,
-                problem_title=problem.title,
+            feedback_md = ai_helper.give_coding_feedback(
+                student_solution=request.code,
+                reference_solution=canonical_solution.code,
+                problem_name=problem.title,
                 test_results=test_summary
             )
         
@@ -195,7 +195,7 @@ async def get_hint(
 ):
     """Stuck? Let's give you a little nudge in the right direction"""
     try:
-        llm_client: LLMClient = req.app.state.llm_client
+        ai_helper: AIHelper = req.app.state.llm_client
         vector_store = req.app.state.vector_store
         
         # Find the problem you need help with
@@ -212,9 +212,9 @@ async def get_hint(
             context = "\n\n".join(context_parts)
         
         # Generate a helpful hint based on what we found
-        hint = llm_client.generate_hint(
-            problem_prompt=problem.prompt_md,
-            context=context,
+        hint = ai_helper.give_hint(
+            problem_description=problem.prompt_md,
+            student_notes=context,
             hint_level=request.hint_level
         )
         

@@ -22,33 +22,33 @@ interface Source {
 }
 
 export default function ChatPanel() {
-  const [messages, setMessages] = useState<Message[]>([])
-  const [input, setInput] = useState('')
-  const [loading, setLoading] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [chatHistory, setChatHistory] = useState<Message[]>([])
+  const [userInput, setUserInput] = useState('')
+  const [isThinking, setIsThinking] = useState(false)
+  const bottomOfChatRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    bottomOfChatRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
   useEffect(() => {
     scrollToBottom()
-  }, [messages])
+  }, [chatHistory])
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const askQuestion = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!input.trim() || loading) return
+    if (!userInput.trim() || isThinking) return
 
-    const userMessage: Message = {
+    const userQuestion: Message = {
       id: Date.now().toString(),
       type: 'user',
-      content: input.trim(),
+      content: userInput.trim(),
       timestamp: new Date()
     }
 
-    setMessages(prev => [...prev, userMessage])
-    setInput('')
-    setLoading(true)
+    setChatHistory(prev => [...prev, userQuestion])
+    setUserInput('')
+    setIsThinking(true)
 
     try {
       const response = await fetch('/api/chat', {
@@ -57,7 +57,7 @@ export default function ChatPanel() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          query: userMessage.content,
+          query: userQuestion.content,
           stream: false
         }),
       })
@@ -66,32 +66,32 @@ export default function ChatPanel() {
         throw new Error('Failed to get response')
       }
 
-      const data = await response.json()
+      const responseData = await response.json()
 
-      const assistantMessage: Message = {
+      const aiAnswer: Message = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: data.response,
-        sources: data.sources,
+        content: responseData.response,
+        sources: responseData.sources,
         timestamp: new Date()
       }
 
-      setMessages(prev => [...prev, assistantMessage])
+      setChatHistory(prev => [...prev, aiAnswer])
     } catch (error) {
         console.error('Oops, chat broke:', error)
-      const errorMessage: Message = {
+      const errorResponse: Message = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
         content: 'Hmm, something went wrong. Is the backend actually running?',
         timestamp: new Date()
       }
-      setMessages(prev => [...prev, errorMessage])
+      setChatHistory(prev => [...prev, errorResponse])
     } finally {
-      setLoading(false)
+      setIsThinking(false)
     }
   }
 
-  const renderMessage = (message: Message) => (
+  const showMessage = (message: Message) => (
     <div
       key={message.id}
       className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} mb-6`}
@@ -179,7 +179,7 @@ export default function ChatPanel() {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
-        {messages.length === 0 ? (
+        {chatHistory.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
               <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -204,8 +204,8 @@ export default function ChatPanel() {
           </div>
         ) : (
           <>
-            {messages.map(renderMessage)}
-            {loading && (
+            {chatHistory.map(showMessage)}
+            {isThinking && (
               <div className="flex justify-start mb-6">
                 <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                   <div className="flex items-center space-x-2">
@@ -215,25 +215,25 @@ export default function ChatPanel() {
                 </div>
               </div>
             )}
-            <div ref={messagesEndRef} />
+            <div ref={bottomOfChatRef} />
           </>
         )}
       </div>
 
       {/* Input */}
       <div className="bg-white border-t border-gray-200 p-6">
-        <form onSubmit={handleSubmit} className="flex space-x-4">
+        <form onSubmit={askQuestion} className="flex space-x-4">
           <input
             type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
+            value={userInput}
+            onChange={(e) => setUserInput(e.target.value)}
             placeholder="What do you want to know about your coding notes?"
             className="flex-1 input-field"
-            disabled={loading}
+            disabled={isThinking}
           />
           <button
             type="submit"
-            disabled={loading || !input.trim()}
+            disabled={isThinking || !userInput.trim()}
             className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
           >
             <PaperAirplaneIcon className="w-4 h-4" />
