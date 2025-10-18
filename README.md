@@ -1,81 +1,81 @@
-# 🎯 Coding Interview RAG Tutor
+# Coding Interview RAG Tutor
 
-Your **completely local** AI coding buddy that learns from YOUR notes and helps you ace those interviews! No cloud, no API keys, just you and your personal AI tutor.
+A completely local AI-powered coding interview prep tool that learns from your own notes and solutions. No cloud services, no API keys, no data leaving your machine.
 
-## ✨ Features
+## What It Does
 
-### 📚 **Chat & Learn Mode**
-- Throw in your coding notes, solutions, and whatever study materials you've got
-- Ask questions and get smart answers based on **your actual content** (not some generic stuff)
-- It'll search through your brain dump and find the good bits
-- Shows you exactly which notes it used (no mystery answers!)
+### Chat & Learn Mode
+- Upload your coding notes, solutions, and study materials
+- Ask questions and get answers based on your actual content
+- Semantic search through your knowledge base
+- Shows you exactly which notes were used for each answer
 
-### 💻 **Practice Mode**
-- Solve coding problems and get instant feedback
-- Runs your code safely in Docker (or just on your machine if Docker's not around)
-- AI compares your solution to the "perfect" one and tells you what's up
-- Hints that get progressively more obvious when you're stuck
-- Keep track of how you're doing over time
+### Practice Mode
+- Solve coding problems with real-time feedback
+- Code execution in Docker (falls back to subprocess if Docker isn't available)
+- AI compares your solution to reference implementations
+- Progressive hint system when you get stuck
+- Track your progress over time
 
-### 🔒 **Fully Local & Private**
-- **Local LLM**: Uses Ollama with Llama 3.2 (zero API keys, zero bills)
-- **Local Vector DB**: FAISS + SQLite (no cloud nonsense)
-- **Your Data Stays Put**: Everything lives on your machine, period
+### Fully Local & Private
+- Uses Ollama with Llama 3.2 (no API costs)
+- FAISS + SQLite for vector storage (no cloud dependencies)
+- Everything runs on your machine
 
-## 🚀 Quick Start
+## Quick Start
 
-### What You Need First
-- Python 3.8+ (you probably have this)
-- Node.js 16+ (for the pretty frontend)
-- Docker (optional, but recommended for running code safely)
+### Prerequisites
+- Python 3.8+
+- Node.js 16+
+- Docker (optional, recommended for secure code execution)
 
-### 1. Get the Code and Set It Up
+### 1. Clone and Setup
 ```bash
 git clone <repository-url>
 cd coding-interview-rag-tutor
-python setup.py  # This does all the heavy lifting
+python setup.py
 ```
 
-### 2. Get Your AI Brain Running
+### 2. Install Ollama
 ```bash
-# Go to https://ollama.ai and grab Ollama
-# Then do this:
-ollama pull llama3.2:latest  # Download the smart AI
-ollama serve  # Start it up
+# Visit https://ollama.ai and install Ollama
+# Then run:
+ollama pull llama3.2:latest
+ollama serve
 ```
 
-### 3. Fire Everything Up
+### 3. Start the Application
 ```bash
-python start.py  # This starts both backend and frontend
+python start.py
 ```
 
-### 4. Start Learning!
-- **Main App**: http://localhost:3000 (this is where the magic happens)
-- **API Docs**: http://localhost:8000/docs (if you're curious about the backend)
+### 4. Open Your Browser
+- Main App: http://localhost:3000
+- API Docs: http://localhost:8000/docs
 
-## 📖 How to Actually Use This Thing
+## How to Use
 
-### Upload Your Brain Dump
-1. Hit the **Upload Notes** tab
-2. Throw in your markdown files, code solutions, random text notes - whatever you've got
-3. The system will chop it up and make it searchable (pretty cool, right?)
+### Upload Your Notes
+1. Go to the Upload Notes tab
+2. Upload markdown files, code solutions, or text notes
+3. The system automatically chunks and embeds your content
 
 ### Chat & Learn
-1. Switch to **Chat & Learn** mode
-2. Ask it stuff like:
+1. Switch to Chat & Learn mode
+2. Ask questions like:
    - "Explain Union-Find with an example"
    - "How does Dijkstra's algorithm work?"
    - "What's the difference between DFS and BFS?"
    - "Show me dynamic programming patterns"
 
-### Practice Your Coding
-1. Jump into **Practice Mode**
-2. Pick easy/medium/hard or just hit random (feeling lucky?)
-3. Code away in the Monaco editor
-4. Hit submit and see how you did
-5. Stuck? Get hints that gradually give away the answer
+### Practice Coding
+1. Go to Practice Mode
+2. Choose difficulty level or get a random problem
+3. Write your solution in the Monaco editor
+4. Submit and get detailed feedback
+5. Use hints if you get stuck
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
@@ -93,16 +93,16 @@ python start.py  # This starts both backend and frontend
                        └──────────────────┘
 ```
 
-### What We Built This With
-- **Frontend**: Next.js, React, Tailwind CSS, Monaco Editor (the fancy code editor)
-- **Backend**: FastAPI, SQLAlchemy, Pydantic (Python goodness)
-- **Vector Store**: FAISS (Facebook's similarity search - finds relevant stuff fast)
-- **Database**: SQLite (simple and reliable)
-- **Embeddings**: BGE-small-en-v1.5 (runs locally, no cloud needed)
-- **LLM**: Ollama running Llama 3.2 (your local AI brain)
-- **Code Execution**: Docker when available, subprocess as backup
+### Tech Stack
+- Frontend: Next.js, React, Tailwind CSS, Monaco Editor
+- Backend: FastAPI, SQLAlchemy, Pydantic
+- Vector Store: FAISS (Facebook AI Similarity Search)
+- Database: SQLite
+- Embeddings: BGE-small-en-v1.5 (local)
+- LLM: Ollama with Llama 3.2
+- Code Execution: Docker (with subprocess fallback)
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 coding-interview-rag-tutor/
@@ -123,7 +123,7 @@ coding-interview-rag-tutor/
 └── README.md
 ```
 
-## 🔧 Configuration
+## Configuration
 
 ### Environment Variables
 Create a `.env` file in the backend directory:
@@ -140,25 +140,25 @@ The system works with various Llama models:
 - `llama3.2:3b` (faster, less capable)
 - `qwen2.5:7b-instruct` (alternative)
 
-## 📊 Sample Data
+## Sample Data
 
 The setup script includes:
-- **6 coding problems** with test cases (Two Sum, Valid Parentheses, etc.)
-- **5 study note topics** (Dynamic Programming, Binary Search, etc.)
-- **Comprehensive test cases** for each problem
+- 6 coding problems with test cases (Two Sum, Valid Parentheses, etc.)
+- 5 study note topics (Dynamic Programming, Binary Search, etc.)
+- Comprehensive test cases for each problem
 
-## 🛠️ Development
+## Development
 
 ### Running in Development Mode
 
-**Backend:**
+Backend:
 ```bash
 cd backend
 pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
-**Frontend:**
+Frontend:
 ```bash
 cd frontend
 npm install
@@ -174,14 +174,14 @@ npm run dev
 1. Use the Upload interface, or
 2. Edit `backend/seed_notes.py` and run it
 
-## 🐳 Docker Support
+## Docker Support
 
 For production deployment:
 ```bash
 docker-compose up --build
 ```
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch
@@ -189,19 +189,19 @@ docker-compose up --build
 4. Add tests if applicable
 5. Submit a pull request
 
-## 📝 License
+## License
 
 MIT License - see LICENSE file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
-- **Ollama** for local LLM inference
-- **FAISS** for efficient vector search
-- **BGE** for high-quality embeddings
-- **FastAPI** for the robust backend framework
-- **Next.js** for the modern frontend
+- Ollama for local LLM inference
+- FAISS for efficient vector search
+- BGE for high-quality embeddings
+- FastAPI for the robust backend framework
+- Next.js for the modern frontend
 
-## 🆘 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -234,7 +234,3 @@ ollama pull llama3.2:latest
 1. Check the logs in the terminal
 2. Visit http://localhost:8000/docs for API documentation
 3. Open browser developer tools for frontend issues
-
----
-
-**Happy coding! 🚀**
